@@ -13,6 +13,8 @@ import an asset to check if the plugin works
 
 ## Mod Installation
 Create an orig folder and create a backup of all the files you will modify
-in C:\MegaScan\Library\support\plugins\houdini\4.6\MSLiveLink\scripts\python\MSPlugin and replace the whole folder
+in C:\MegaScan\Library\support\plugins\houdini\4.6\MSLiveLink\scripts\python\MSPlugin and **REPLACE** the files I have added in the repo.
+ 
+**DO NOT** just copy and paste the whole folder as I have left out the python files that I haven't modified.
 This should now create extra component builder nodes with all the variants connected as well as create mtlx materials in Solaris.
 All Redshift materials have been updated for standard shader and USD. Also, make textures visible in the viewport.
