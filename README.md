@@ -5,6 +5,9 @@ This also has added support for mtlx with karma and Redshift
 
 ## Megascans 4.6 Installation for Houdini 20.0
 Open Quixel Bridge and download the Houdini plugin by going to Edit > Manage Plugins > Houdini 4.6 and download the plugin
+  
+**IMPORTANT**
+  
 As this is not a valid version for 20.0 you will have to manually point to the plugin in your Houdini 20.0 .env file or copy the old MegascansPlugin.json (might be in documents > Houdini20.0 > packages if you install for a previous version) into your packages folder in documents > Houdini20.0
 If you do not have any of these manually create a packages folder and add the MegascansPlugin.json
 Modify the .json file to point to the install location for your MSLiveLink
@@ -18,3 +21,5 @@ in C:\MegaScan\Library\support\plugins\houdini\4.6\MSLiveLink\scripts\python\MSP
 **DO NOT** just copy and paste the whole folder as I have left out the python files that I haven't modified.
 This should now create extra component builder nodes with all the variants connected as well as create mtlx materials in Solaris.
 All Redshift materials have been updated for standard shader and USD. Also, make textures visible in the viewport.
+
+If you are still confused you can watch this [video](https://supafried.com/technical-blog) on how to install 
