@@ -65,10 +65,10 @@ class ImportSurface(with_metaclass(Singleton)):
                                 folder_type=hou.folderType.Simple,
                                     parm_templates=[
                                         hou.ToggleParmTemplate("ogl_use_displacemap", "Displace", default_value=False),
-                                        hou.FloatParmTemplate("ogl_displacescale", "Displace Scale", 1, default_expression=[("1/ch(\"Displacement1/scale\")")], default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
+                                        hou.FloatParmTemplate("ogl_displacescale", "Displace Scale", 1, default_expression=[("ch(\"Displacement1/scale\")")], default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
                                         hou.FloatParmTemplate("ogl_displaceoffset", "Displace Offset", 1, default_expression=[("ch(\"Displacement1/newrange_min\")")], default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
                                         hou.StringParmTemplate("ogl_displacemap", "Texture", 1, [expB]),
-                                        hou.FloatParmTemplate("ogl_displace_uvscale", "UV Scale", 2, default_expression=("ch(\"displacement/scale1\")", "ch(\"displacement/scale2\")"), default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
+                                        hou.FloatParmTemplate("ogl_displace_uvscale", "UV Scale", 2, default_expression=("1/ch(\"displacement/scale1\")", "1/ch(\"displacement/scale2\")"), default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
                                         hou.FloatParmTemplate("ogl_displace_uvtranslate", "UV Offset", 2, default_expression=("ch(\"displacement/offset1\")", "ch(\"displacement/offset2\")"), default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
                                         hou.FloatParmTemplate("ogl_displace_uvrotate", "UV Rotate", 1, default_expression=[("ch(\"displacement/rotate\")")], default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript))
                                         
