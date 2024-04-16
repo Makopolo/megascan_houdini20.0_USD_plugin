@@ -43,6 +43,20 @@ class ImportSurface(with_metaclass(Singleton)):
                 expA = "`chs(\"albedo/tex0\")`"
                 expB = "`chs(\"displacement/tex0\")`"
                 expC = "`chs(\"Sprite1/tex0\")`"
+
+                nodeTexParam = hou.FolderParmTemplate(
+                "rstexs",
+                "RS Textures",
+                folder_type=hou.folderType.Simple,
+                    parm_templates=[
+                        hou.FloatParmTemplate("rs_tex_uvscale1", "Scale", 2, default_expression=("ch(\"albedo/scale1\")", "ch(\"albedo/scale2\")"), default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
+                        hou.FloatParmTemplate("rs_tex_uvtranslate1", "Offset", 2, default_expression=("ch(\"albedo/offset1\")", "ch(\"albedo/offset2\")"), default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
+                        hou.FloatParmTemplate("rs_tex_uvrotate1", "Rotate", 1, default_expression=[("ch(\"albedo/rotate\")")], default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
+                        hou.ToggleParmTemplate("ogl_use_tex1", "Display Texture", default_value=True)
+                        
+
+                    ]
+                )
                 nodeAddParam = hou.FolderParmTemplate(
                                 "ogltexs",
                                 "OGL Textures",
@@ -52,8 +66,8 @@ class ImportSurface(with_metaclass(Singleton)):
                                         hou.StringParmTemplate("ogl_opacitymap", "Alpha", 1, [expC]),
                                         hou.FloatParmTemplate("ogl_tex_uvscale1", "Scale", 2, default_expression=("1/ch(\"albedo/scale1\")", "1/ch(\"albedo/scale2\")"), default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
                                         hou.FloatParmTemplate("ogl_tex_uvtranslate1", "Offset", 2, default_expression=("ch(\"albedo/offset1\")", "ch(\"albedo/offset2\")"), default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
-                                        hou.FloatParmTemplate("ogl_tex_uvrotate1", "Rotate", 1, default_expression=[("ch(\"albedo/rotate\")")], default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript)),
-                                        hou.ToggleParmTemplate("ogl_use_tex1", "Display Texture", default_value=True)
+                                        hou.FloatParmTemplate("ogl_tex_uvrotate1", "Rotate", 1, default_expression=[("ch(\"albedo/rotate\")")], default_expression_language=(hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript, hou.scriptLanguage.Hscript))
+                                        
                                         
 
                                     ]
@@ -76,9 +90,9 @@ class ImportSurface(with_metaclass(Singleton)):
                                     ]
                                 )
 
-
-                nodeParamsGroups.append(nodeAddParam)
+                nodeParamsGroups.append(nodeTexParam)
                 nodeParamsGroups.append(nodeAddDispParam)
+                nodeParamsGroups.append(nodeAddParam)
                 redshiftContainer.setParmTemplateGroup(nodeParamsGroups)
             #else:
                     #pass
