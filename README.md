@@ -1,4 +1,4 @@
-# megascan_houdini20.0_USD_plugin
+# megascan_houdini20.0_USD_plugin (Windows)
 Modified Megascans plugin for Houdini 20.0
 This is a modification to the Houdini Megascans plugin (Windows) so that you can import variants and assets using the component builder method (Solaris). You will need to install Quixel Bridge to use this mod
 This also has added support for mtlx with karma and Redshift
