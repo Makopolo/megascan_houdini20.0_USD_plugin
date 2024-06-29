@@ -413,7 +413,7 @@ class ImportUSD(with_metaclass(Singleton)):
                     blastGroup = assetLod.createOutputNode("blast")
                     blastGroup.parm("group").set("@name=" + scatterGroup)
                     blastGroup.parm("negate").set(1)
-                    varLodOut = blastGroup.createOutputNode("null", scatterGroup)
+                    varLodOut = blastGroup.createOutputNode("null", scatterGroup.split("/")[-1])
                     varLodOut.setRenderFlag(False)
                     
                     # assetLod.setRenderFlag(False)
