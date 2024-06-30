@@ -93,19 +93,19 @@ def usdVariantSetup(importedAssets,assetData,importOptions, importParams):
     
     assetMaterial = ImportSurface().importAsset(assetData, importOptions, importParams)
     # usdMaterialContainer.parm("fillmaterials").pressButton()
-    usdMaterialContainer.parm("matnode1").set(assetMaterial.name())
-    usdMaterialContainer.parm("matpath1").set(usdMaterialContainer.parm("containerpath").eval() + assetMaterial.name())
+    usdMaterialContainer.parm("matnode1").set("*")#
+    #usdMaterialContainer.parm("matpath1").set(usdMaterialContainer.parm("containerpath").eval() + assetMaterial.name())#
 
     matConfigNode = usdMaterialContainer.createOutputNode("configurelayer")
 
     materialReference = primitiveConfigNode.createOutputNode("reference")
     materialPrimPath =   primitiveBasePath + "/Material"
     materialReference.parm("primpath").set(materialPrimPath)
-    #materialReference.parm("reftype").set("inputref")
+    materialReference.parm("reftype").set("file")#
 
     assignMaterial = materialReference.createOutputNode("assignmaterial")
     assignMaterial.parm("primpattern1").set(primitiveBasePath + "/*")
-    assignMaterial.parm("matspecpath1").set(materialPrimPath + "/" + assetMaterial.name())
+    assignMaterial.parm("matspecpath1").set(materialPrimPath + "/" + importParams["assetName"])#
     materialReference.setInput(1, matConfigNode)
 
     variantNode = assignMaterial.createOutputNode("addvariant")
