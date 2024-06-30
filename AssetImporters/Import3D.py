@@ -22,6 +22,12 @@ class ImportUSD(with_metaclass(Singleton)):
     def importNormalUSD(self, assetData, importOptions, importParams):
         fileextension = os.path.splitext(assetData["meshList"][0]["path"])[1]
         importedAssets = None
+        if importOptions["UI"]["USDOptions"]["USDMaterial"] == "Karma":
+            importOptions["UI"]["USDOptions"]["Material"] = "Karma"
+            importOptions["UI"]["USDOptions"]["Renderer"] = "Karma"
+        if importOptions["UI"]["USDOptions"]["USDMaterial"] == "Redshift_USD":
+            importOptions["UI"]["USDOptions"]["Material"] = "Redshift Material"
+            importOptions["UI"]["USDOptions"]["Renderer"] = "Redshift"
         if fileextension !=".abc":  
             importedAssets = self.createObjSetup(assetData, importOptions, importParams)  
         self.usdAssetSetup(importedAssets, assetData, importOptions, importParams)       
@@ -35,10 +41,10 @@ class ImportUSD(with_metaclass(Singleton)):
         
 
         if fileextension ==".abc":
-            variantPaths,baseNode,firstVariation = self.scatterAlembicSetup(assetData, importOptions, importParams)
+            variantPaths,baseNode,firstVariation,compVari = self.scatterAlembicSetup(assetData, importOptions, importParams)
 
         else:
-            variantPaths,baseNode, firstVariation = self.scatterSopSetup(assetData, importOptions, importParams)
+            variantPaths,baseNode, firstVariation,compVari = self.scatterSopSetup(assetData, importOptions, importParams)
         
         subnetInput = hou.node(importParams["usdAssetPath"]).item("1")
         subnetOutputNode = hou.node(importParams["usdAssetPath"]).node("output0")
@@ -52,21 +58,19 @@ class ImportUSD(with_metaclass(Singleton)):
         importParams["materialPath"] = usdMaterialContainer.path()
         
         assetMaterial = ImportSurface().importAsset(assetData, importOptions, importParams)
-        # usdMaterialContainer.parm("fillmaterials").pressButton()
-        usdMaterialContainer.parm("matnode1").set(assetMaterial.name())
-        usdMaterialContainer.parm("matpath1").set(usdMaterialContainer.parm("containerpath").eval() + assetMaterial.name())
+        usdMaterialContainer.parm("matnode1").set("*")
+        #usdMaterialContainer.parm("matpath1").set(usdMaterialContainer.parm("containerpath").eval() + assetMaterial.name())
 
         matConfigNode = usdMaterialContainer.createOutputNode("configurelayer")
 
         materialReference = primitiveConfigNode.createOutputNode("reference")
         materialPrimPath =   primitiveBasePath + "/Material"
         materialReference.parm("primpath").set(materialPrimPath)
-        materialReference.parm("reftype").set("inputref")
+        materialReference.parm("reftype").set("file")
 
         assignMaterial = materialReference.createOutputNode("assignmaterial")
-        # assignMaterial.parm("primpattern1").set(primitiveBasePath + "/*")
         assignMaterial.parm("primpattern1").set(primitiveBasePath + "/*")
-        assignMaterial.parm("matspecpath1").set(materialPrimPath + "/" + assetMaterial.name())
+        assignMaterial.parm("matspecpath1").set(materialPrimPath + "/" + importParams["assetName"])#
         materialReference.setInput(1, matConfigNode)
 
         variantNode = assignMaterial.createOutputNode("addvariant")
@@ -74,7 +78,6 @@ class ImportUSD(with_metaclass(Singleton)):
         variantNode.parm("variantprimpath").set(primitiveBasePath)
         variantNode.parm("createoptionsblock").set(1)
 
-        # hou.node(importParams["usdAssetPath"])
         contextBlock = assignMaterial.createOutputNode("begincontextoptionsblock")
         contextBlock.parm("layerbreak").set(1)
 
@@ -93,7 +96,6 @@ class ImportUSD(with_metaclass(Singleton)):
         variantSet = variantNode.createOutputNode("setvariant")
         variantSet.parm("variantset1").set("model")
         variantSet.parm("variantnameuseindex1").set(1)
-        # variantSet.parm("variantname1").set(variantPaths[0].split("/")[-1])
 
         if importOptions["UI"]["USDOptions"]["USDMaterial"] == "Arnold" :
             renderSettings = variantSet.createOutputNode("rendergeometrysettings")
@@ -101,14 +103,49 @@ class ImportUSD(with_metaclass(Singleton)):
             renderSettings.parm("xn__primvarsarnolddisp_height_uhbg").set(0.008)
             variantSet = renderSettings
 
+        ##########################################
+        #
+        #      Modified section
+        #
+        ##########################################
+        assName = rchop(assetMaterial.name(),"_0")
+        
+        matCont = hou.node(importParams["usdAssetPath"]).createNode("materiallibrary", importParams["assetName"]+"_mat")
+        importParams["materialPath"] = matCont.path()        
+        getMat = ImportSurface().importAsset(assetData, importOptions, importParams)
+        matCont.parm("matpathprefix").set("/ASSET/mtl/")
+        matCont.parm("matnode1").set("*")
+
+        #Create component material node set material path and connect the node to component varient and material
+        compMaterial = hou.node(importParams["usdAssetPath"]).createNode('componentmaterial')
+        compMaterial.setNextInput(compVari)
+        compMaterial.setNextInput(matCont)
+
+        #Create Compoenet geometry output node and set varient mode on
+        compOutput = hou.node(importParams["usdAssetPath"]).createNode('componentoutput',importParams["assetName"]+"_ASSET")
+        compOutput.parm("variantlayers").set(1)
+        compOutput.parm("setdefaultvariants").set(1)
+        compOutput.setNextInput(compMaterial)
+        compOutput.setDisplayFlag(True)
+
+        hou.node(importParams["usdAssetPath"]).layoutChildren()
+        ######################################
+
         outputNode = variantSet.createOutputNode("null", importParams["assetName"])
         #outputNode.setDisplayFlag(True)
         
-        subnetOutputNode.setInput(0, outputNode)
+        subnetOutputNode.setInput(0, compOutput)
         subnetOutputNode.setDisplayFlag(True)
 
-        #hou.node(importParams["usdAssetPath"]).layoutChildren()
         hou.node(importParams["usdAssetPath"]).moveToGoodPosition()
+
+        ##########################################
+        #
+        #      Modified section
+        #
+        ##########################################
+        hou.node(importParams["usdAssetPath"]).layoutChildren()
+        ######################################
         
     def scatterAlembicSetup(self, assetData, importOptions, importParams):
         variantPaths = []
@@ -121,14 +158,6 @@ class ImportUSD(with_metaclass(Singleton)):
         
         primitiveName = importParams["assetName"]        
         primitiveBasePath = importOptions['UI']["USDOptions"]["RefPath3D"].rstrip("/") + "/" + primitiveName 
-        # primitivePath = primitiveBasePath + pathList[0]
-        # variantPaths.append(primitivePath)
-        # baseNode = hou.node(importParams["usdAssetPath"]).createNode("reference")
-
-        # baseNode.parm("filepath1").set( assetData["meshList"][0]["path"].replace("\\", "/"))
-        # baseNode.parm("primpath").set(primitivePath)
-        # baseNode.parm("filerefprim1").set("")
-        # baseNode.parm("filerefprimpath1").set(pathList[0])
         baseNode = None
         for abcPath in pathList:
             if baseNode == None:
@@ -178,8 +207,56 @@ class ImportUSD(with_metaclass(Singleton)):
             primitivePath = primitiveBasePath + "/" + scatter.name() #+ "/Geo"
             baseNode.parm("primpath").set(primitivePath)
             variantPaths.append(primitivePath)
+        ##########################################
+        #
+        #      Modified section
+        #
+        ##########################################
+        path = "/stage/" + importParams["assetName"]
+        assName = rchop(importParams["assetName"],"_0")
+        objPath = "/obj/" + importParams["assetName"] + "/lod0/"
+        compVari = hou.node(importParams["usdAssetPath"]).createNode('componentgeometryvariants')
+        for scatter in scatterSource:
+            compGeoNode = hou.node(importParams["usdAssetPath"]).createNode('componentgeometry', assName + "_0")
+            compGeoNode.parm("sourceinput").set(0)
+            #compGeoNode.parm("sourcesop").set(scatter.path())
+            getGeoNode = hou.node(compGeoNode.path() + "/sopnet/geo").createNode("object_merge")
+            getGeoNode.parm("objpath1").set(scatter.path())
+            reduceNode = getGeoNode.createOutputNode("polyreduce::2.0")
+            reduceNode.parm("percentage").set(5)
+            attDelNode = reduceNode.createOutputNode("attribdelete")
+            attDelNode.parm("ptdel").set("* ^Cd")
+            attDelNode.parm("vtxdel").set("* ^N ^uv")
+            attDelNode.parm("primdel").set("*")
+            proxyNode = hou.node(compGeoNode.path() + "/sopnet/geo/proxy")
+            proxyNode.setNextInput(attDelNode)
+            attDelDefault = hou.node(compGeoNode.path() + "/sopnet/geo").createNode("attribdelete")
+            attDelDefault.parm("ptdel").set("* ^Cd")
+            attDelDefault.parm("primdel").set("*")
+            attDelDefault.setNextInput(getGeoNode)
+            defaultNode = hou.node(compGeoNode.path() + "/sopnet/geo/default")
+            defaultNode.setNextInput(attDelDefault)
+            convdecompNode =  hou.node(compGeoNode.path() + "/sopnet/geo").createNode("convexdecomposition")
+            convdecompNode.setNextInput(getGeoNode)
+            convdecompNode.parm("maxconcavity").setExpression("0.1*sqrt(bbox(0,D_XSIZE)^2+bbox(0,D_YSIZE)^2+bbox(0,D_ZSIZE)^2)")
+            attDelSim = convdecompNode.createOutputNode("attribdelete")
+            attDelSim.parm("ptdel").set("* ^Cd")
+            attDelSim.parm("vtxdel").set("* ^N")
+            attDelSim.parm("primdel").set("*")
+            simNode = hou.node(compGeoNode.path() + "/sopnet/geo/simproxy")
+            simNode.setNextInput(attDelSim)
 
-        return variantPaths,baseNode,firstVariation
+
+            hou.node(compGeoNode.path() + "/sopnet/geo").layoutChildren()
+            compVari.setNextInput(compGeoNode)
+            
+
+
+
+        
+
+#####################################################################
+        return variantPaths,baseNode,firstVariation,compVari
 
     def usdAssetSetup(self,  importedAssets,assetData,importOptions, importParams):
         fileextension = os.path.splitext(assetData["meshList"][0]["path"])[1]
@@ -225,11 +302,16 @@ class ImportUSD(with_metaclass(Singleton)):
 
         usdMaterialContainer = hou.node(importParams["materialPath"]).createNode("materiallibrary", importParams["assetName"])
         importParams["materialPath"] = usdMaterialContainer.path()        
-        
+        if importOptions["UI"]["USDOptions"]["USDMaterial"] == "Karma":
+            importOptions["UI"]["USDOptions"]["Material"] = "Karma"
+            importOptions["UI"]["USDOptions"]["Renderer"] = "Karma"
+        if importOptions["UI"]["USDOptions"]["USDMaterial"] == "Redshift_USD":
+            importOptions["UI"]["USDOptions"]["Material"] = "Redshift Material"
+            importOptions["UI"]["USDOptions"]["Renderer"] = "Redshift"
+
         assetMaterial = ImportSurface().importAsset(assetData, importOptions, importParams)
-        # usdMaterialContainer.parm("fillmaterials").pressButton()
-        usdMaterialContainer.parm("matnode1").set(assetMaterial.name())
-        usdMaterialContainer.parm("matpath1").set(usdMaterialContainer.parm("containerpath").eval() + assetMaterial.name())
+        usdMaterialContainer.parm("matnode1").set("*")#
+        #usdMaterialContainer.parm("matpath1").set(usdMaterialContainer.parm("containerpath").eval() + assetMaterial.name())
 
         primitiveConfigNode = baseNode.createOutputNode("configureprimitive")
         primitiveConfigNode.parm("primpattern").set(primitivePath)
@@ -239,13 +321,12 @@ class ImportUSD(with_metaclass(Singleton)):
         materialReference = primitiveConfigNode.createOutputNode("reference")
         materialPrimPath =   primitiveBasePath + "/Material"
         materialReference.parm("primpath").set(materialPrimPath)
-        materialReference.parm("reftype").set("inputref")
+        materialReference.parm("reftype").set("file")
 
         matConfigNode = usdMaterialContainer.createOutputNode("configurelayer")
 
         assignMaterial = materialReference.createOutputNode("assignmaterial")
         assignMaterial.parm("primpattern1").set(primitivePath)
-        assignMaterial.parm("matspecpath1").set(materialPrimPath + "/" + assetMaterial.name())
         materialReference.setInput(1, matConfigNode)
 
         if importOptions["UI"]["USDOptions"]["USDMaterial"] == "Arnold" :
@@ -256,17 +337,42 @@ class ImportUSD(with_metaclass(Singleton)):
 
 
         outputNode = assignMaterial.createOutputNode("null", importParams["assetName"])
-        
-        # outputNode.setDisplayFlag(True)
-
-        subnetOutputNode.setInput(0, outputNode)
         subnetOutputNode.setDisplayFlag(True)
 
         hou.node(importParams["usdAssetPath"]).moveToGoodPosition()
         #hou.node(importParams["usdAssetPath"]).layoutChildren()
         outputNode.setDisplayFlag(True)
+        ##########################################
+        #
+        #      Modified section
+        #
+        ##########################################
 
-        return outputNode
+
+        assName = rchop(assetMaterial.name(),"_0")
+        newVariName = rchop(importedAssets[0].name(),"0")
+        
+        baseNode = hou.node(importParams["usdAssetPath"]).createNode('componentgeometry', assName + "_" + importedAssets[0].name())
+        baseNode.parm('sourceinput').set(2)
+        baseNode.parm('sourcesop').set(importedAssets[0].path())
+
+        matCont = hou.node(importParams["usdAssetPath"]).createNode("materiallibrary", importParams["assetName"])
+        importParams["materialPath"] = matCont.path()        
+        getMat = ImportSurface().importAsset(assetData, importOptions, importParams)
+        matCont.parm("matpathprefix").set("/ASSET/mtl/")
+        matCont.parm("matnode1").set("*")
+
+        compMaterial = hou.node(importParams["usdAssetPath"]).createNode('componentmaterial')
+        compMaterial.setNextInput(baseNode)
+        compMaterial.setNextInput(matCont)
+        compOutput = hou.node(importParams["usdAssetPath"]).createNode('componentoutput',importParams["assetName"]+"_ASSET")
+        compOutput.setNextInput(compMaterial)
+        
+        compOutput.setDisplayFlag(True)
+        ###########################################
+        subnetOutputNode.setInput(0, compOutput)
+        hou.node(importParams["usdAssetPath"]).layoutChildren()
+        # return outputNode
 
     def createVariants(self, variantList):
         pass     
@@ -339,7 +445,14 @@ class ImportUSD(with_metaclass(Singleton)):
         uniformScale = 0.01        
         fileImportNode = hou.node(targetPath).createNode("file")
         fileImportNode.parm("file").set(meshSourcePath)
-        transformNode = fileImportNode.createOutputNode("xform")
+
+        #######
+        #Mod
+        #########
+        createNormalNode = fileImportNode.createOutputNode("normal")
+        transformNode = createNormalNode.createOutputNode("xform")
+        ##################
+        #transformNode = fileImportNode.createOutputNode("xform")
         transformNode.parm("scale").set(uniformScale)
         outputNullNode = transformNode.createOutputNode("null", outputName)
         return outputNullNode
@@ -372,6 +485,7 @@ class Import3DAsset(with_metaclass(Singleton)):
         
         self.importType = "usd"
         if self.subType(assetData) == "Scatter":
+            #check if any tags in asset info has "scatter" 
             if importOptions["UI"]["ImportOptions"]["EnableUSD"]:
                 ImportUSD().importScatterUSD(assetData, importOptions, importParams)
             else:
@@ -379,26 +493,29 @@ class Import3DAsset(with_metaclass(Singleton)):
                 importedAssets = self.importScatter(assetData, importOptions, importParams)
                 assetPaths = [asset.path() for asset in importedAssets ]
                 if importOptions["UI"]["ImportOptions"]["UseScattering"]:
+                    #if the checkbox "use megascans scattering" is selected
                     MegascansScatter().createScatter(assetPaths,None, importParams["assetPath"], importOptions)
 
                 hou.node(importParams["assetPath"]).moveToGoodPosition()
 
         else :
             if importOptions["UI"]["ImportOptions"]["EnableUSD"]:
+                #if the checkbox "import asset on usd stage" is checked
                 ImportUSD().importNormalUSD(assetData, importOptions, importParams)
                 
             else:
                 importedAssets = self.importNormal3D(assetData, importOptions, importParams)
                 assetPaths = [asset.path() for asset in importedAssets ]
                 if importOptions["UI"]["ImportOptions"]["UseScattering"]:
+                    #if the checkbox "Use Megascan Scattering" is checked 
                     MegascansScatter().createScatter(assetPaths,None, importParams["assetPath"], importOptions)
         
                 hou.node(importParams["assetPath"]).moveToGoodPosition()
-            # /obj/Megascans/3D_Assets/Old_Rusty_Cap_tjxmcjujw
 
 
 
     def subType(self, assetData):
+        ##check if any of the information in the asset includes "scatter" and reutrn "Scatter"
         if "scatter" in assetData["tags"] or "scatter" in assetData["categories"] or  "cmb_asset" in assetData["tags"] or "cmb_asset" in assetData["categories"]: return "Scatter"
         else : return "Normal"
 
@@ -412,6 +529,8 @@ class Import3DAsset(with_metaclass(Singleton)):
         
         assetMaterialPath = ""
         
+
+
         if assetMaterial is not None: assetMaterialPath = assetMaterial.path()
         meshSourcePath = assetData["meshList"][0]["path"]
         outputName = importParams["assetName"] + "_" + assetData["activeLOD"]
@@ -449,6 +568,7 @@ class Import3DAsset(with_metaclass(Singleton)):
         elif importOptions["UI"]["ImportOptions"]["Renderer"] == "Arnold":
             geometryContainer.parm("ar_disp_height").set(0.008)
 
+        
         geometryContainer.moveToGoodPosition()
         geometryContainer.setSelected(True)
         
@@ -467,7 +587,17 @@ class Import3DAsset(with_metaclass(Singleton)):
         else :
             fileImportNode = hou.node(targetPath).createNode("file")
             fileImportNode.parm("file").set(meshSourcePath.replace("\\", "/"))
-        transformNode = fileImportNode.createOutputNode("xform")
+        ##########################################
+        #
+        #      Modified section
+        #
+        ##########################################
+
+        normalVert = fileImportNode.createOutputNode("normal")
+        transformNode = normalVert.createOutputNode("xform")
+
+        #####################################################################
+
         transformNode.parm("scale").set(uniformScale)
         
         attribDelete = transformNode
@@ -558,23 +688,20 @@ class Import3DAsset(with_metaclass(Singleton)):
         elif importOptions["UI"]["ImportOptions"]["Renderer"] == "Arnold":
             activeLodGeo.parm("ar_disp_height").set(0.008)
         
+
+        ##########################################
+        #
+        #      Modified section
+        #
+        ##########################################
+
+        activeLodGeo.moveToGoodPosition()
+        activeLodGeo.setSelected(True)
+
         return allVariations
         
+        ######################################################
 
-
-        # importedAssets = self.importNormal3D(assetData, importOptions, importParams)
-        # for importedAsset in importedAssets:
-        #     assetGeometry = importedAsset.geometry()
-        #     primitveAttribs = assetGeometry.primAttribs()
-        #     nameAttrib = [attrib for attrib in primitveAttribs if attrib.name()=="name"][0]
-        #     scatterGroups = nameAttrib.strings()
-        #     scatterGeometry = hou.node(importParams["assetPath"]).createNode("geo", importedAsset.name())
-        #     for scatterGroup in scatterGroups:
-                
-        #         objMerge = hou.node(scatterGeometry.path()).createNode("object_merge")
-        #         objMerge.parm("objpath1").set(importedAsset.path())
-        #         objMerge.parm("group1").set("@"+scatterGroup)
-        #         objMerge.createOutputNode("null", scatterGroup)
 
 
     def scatterSeparator(self, scatterSource):
