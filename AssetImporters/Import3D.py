@@ -327,6 +327,7 @@ class ImportUSD(with_metaclass(Singleton)):
 
         assignMaterial = materialReference.createOutputNode("assignmaterial")
         assignMaterial.parm("primpattern1").set(primitivePath)
+        assignMaterial.parm("matspecpath1").set(materialPrimPath + "/" + importParams["assetName"])#
         materialReference.setInput(1, matConfigNode)
 
         if importOptions["UI"]["USDOptions"]["USDMaterial"] == "Arnold" :
