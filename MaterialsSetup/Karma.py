@@ -85,7 +85,7 @@ class KarmaMaterialFactory(with_metaclass(Singleton)):
         mtlxStd = materialContainer.createNode("mtlxstandard_surface")
         mtlxOUT.setInput(0, mtlxStd, 0)
         mtlxDisp = materialContainer.createNode("mtlxdisplacement")
-        mtlxDisp.parm("scale").set(0.1)
+        mtlxDisp.parm("scale").set(0.01)
         mtlxOUT.setInput(1, mtlxDisp, 0)
         mtlxProp = materialContainer.createNode("kma_material_properties")
         mtlxOUT.setInput(2, mtlxProp, 0)
@@ -181,6 +181,7 @@ class KarmaMaterialFactory(with_metaclass(Singleton)):
                 textureNode.parm("signature").set("default")      
                 remapNode.parm("outlow").set(-0.5)
                 remapNode.parm("outhigh").set(0.5)
+                mtlxDisp.setNamedInput("displacement", remapNode, "out")
                 #materialNode.setNamedInput(textureParams["input"], mtlxDisp, textureParams["output"])
                 #dispNode.setNamedInput("texMap", textureNode, "outColor")
 
